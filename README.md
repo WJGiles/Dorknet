@@ -5,6 +5,8 @@ Artisanal CNNs.
 * Enough building blocks to put together a lot of serious architectures (ResNets, MobileNets etc). 
 * GPU support via Cupy (currently mandatory but work in progress to make this optional - CPU-only version uses Cython for critical parts to improve performance)
 * Image data augmentation routines, l2 regularisation and 'mixup'
+* Class activation maps (CAM) for visualising image regions responsible for predictions
+* Work in progress!
 
 
 ## Installation
@@ -21,6 +23,8 @@ Artisanal CNNs.
 
 * Docker
    * The Docker directory in this repo provides scripts for building and running Dorknet images based on an Intel Python distribution image (which I've found offers a really useful speedup when running in CPU only mode), and an official cupy container. You'll need to adjust paths in volume mappings in the the 'run' scripts to make your datasets visible within the container when running these.
+
+* There is a release with a zip file containing a trained model - the one used in generating the CAM images below.
 
 ## Use
 
