@@ -1,0 +1,12 @@
+FROM cupy/cupy:v7.3.0-python3
+
+RUN apt update
+RUN apt -y install nano git libgtk2.0-dev
+RUN pip3 install opencv-python pillow tqdm line-profiler cython h5py
+
+RUN git clone https://github.com/pydata/numexpr
+RUN cd numexpr && python3 setup.py build && python3 setup.py install
+
+WORKDIR /Dorknet
+
+CMD cd layers && python3 setup.py build_ext install && cd /Dorknet && /bin/bash

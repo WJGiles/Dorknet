@@ -1,0 +1,6 @@
+__pycache__/
+*.c
+.ipynb_checkpoints
+env/
+build/
+*.h5
