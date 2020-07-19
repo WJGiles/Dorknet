@@ -6,7 +6,6 @@ from layers.dense_layer import DenseLayer
 from layers.convolution import ConvLayer
 from layers.depthwise_convolution import DepthwiseConvLayer
 from layers.pointwise_convolution import PointwiseConvLayer
-from layers.basic_residual_block import BasicResidualBlock
 from layers.residual_block import ResidualBlock
 from layers.activations import ReLu
 from layers.pooling import GlobalAveragePoolingLayer
@@ -105,8 +104,6 @@ class Network:
                     l = DenseLayer(layer_name)
                 elif l_type == "SoftmaxWithCrossEntropy":
                     l = SoftmaxWithCrossEntropy(layer_name)
-                elif l_type == "BasicResidualBlock":
-                    l = BasicResidualBlock(layer_name)
                 elif l_type == "ResidualBlock":
                     l = ResidualBlock(layer_name)
 

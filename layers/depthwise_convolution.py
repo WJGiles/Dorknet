@@ -91,8 +91,8 @@ class DepthwiseConvLayer:
         self.num_col_patches = ((X.shape[3] - self.f_cols)/self.stride) + 1
 
         out = cp.zeros((X.shape[0], X.shape[1], int(self.num_row_patches), int(self.num_col_patches)), dtype=np.float32)
-        
-        self.forward_kernel((150024,), (1024,), (cp.asarray(self.learned_params["weights"]), X, out, 
+        numThreadBlocks = int((X.shape[0]*X.shape[1]*self.num_row_patches*self.num_col_patches + 1024 - 1) / 1024)
+        self.forward_kernel((numThreadBlocks,), (1024,), (cp.asarray(self.learned_params["weights"]), X, out, 
                                              X.shape[0],X.shape[1],X.shape[2],X.shape[3],
                                              self.f_rows, self.f_cols, int(self.num_row_patches), int(self.num_col_patches),
                                              self.stride))
@@ -192,8 +192,6 @@ class DepthwiseConvLayer:
         dx, dw = im2col.depthwise_backward_direct_cy(upstream_dx, self.X, self.learned_params["weights"],
                                                      self.num_row_patches, self.num_col_patches, self.stride,
                                                      self.padding)
-        # print("dw backward cy num_row, col_patches", self.num_row_patches, self.num_col_patches)
-        # print("dw backward cy dx.shape", dx.shape)
         self.grads["weights"] = np.sum(dw, axis=0)
         if self.weight_regulariser:
             self.grads["weights"] += self.weight_regulariser.backward(self.learned_params["weights"])
@@ -206,7 +204,7 @@ class DepthwiseConvLayer:
 
         padded_dx = cp.zeros(self.X.shape, dtype=cp.float32)
         dw = cp.zeros(self.learned_params["weights"].shape, dtype=cp.float32)
-        
+        numThreadBlocks = int((upstream_dx.shape[0]*upstream_dx.shape[1]*self.num_row_patches*self.num_col_patches + 1024 - 1) / 1024)
         self.backward_kernel((10024,), (1024,), (upstream_dx, self.X, cp.asarray(self.learned_params["weights"]),
                                                  padded_dx, dw, 
                                                  self.X.shape[-2], self.X.shape[-1], self.X.shape[1], self.X.shape[0],

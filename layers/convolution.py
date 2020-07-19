@@ -69,8 +69,8 @@ class ConvLayer:
             self.num_col_patches = ((X.shape[3] - self.f_cols)/self.stride) + 1
             self.patches = cp.zeros((X.shape[0]*int(self.num_row_patches)*int(self.num_col_patches),
                             self.f_rows*self.f_cols*self.filter_chans)).astype(cp.float32)
-
-            self.im2col_kernel((10024,), (1024,), (X, self.patches, self.f_rows, self.f_cols,
+            numThreadBlocks = int((X.shape[0]*X.shape[1]*self.num_row_patches*self.num_col_patches + 1024 - 1) / 1024)
+            self.im2col_kernel((numThreadBlocks,), (1024,), (X, self.patches, self.f_rows, self.f_cols,
                                                    X.shape[0], self.filter_chans, X.shape[-2], X.shape[-1], 
                                                    int(self.num_row_patches), int(self.num_col_patches), self.stride))
             out = cp.asnumpy(cp.dot(cp.asarray(self.patches), cp.asarray(flat_filter.T)))
@@ -106,7 +106,8 @@ class ConvLayer:
             num_padded_rows = int(self.stride*(self.num_row_patches - 1) + self.f_rows)
             num_padded_cols = int(self.stride*(self.num_col_patches - 1) + self.f_cols)
             padded_dx = cp.zeros((self.input_shape[0], self.input_shape[1], num_padded_rows, num_padded_cols), dtype=cp.float32)
-            self.row2im_kernel((10024,), (1024,), (padded_dx, dx_rows, self.f_rows, self.f_cols, self.input_shape[0], self.input_shape[1], 
+            numThreadBlocks = int((padded_dx.shape[0]*padded_dx.shape[1]*num_padded_rows*num_padded_cols + 1024 - 1) / 1024)
+            self.row2im_kernel((numThreadBlocks,), (1024,), (padded_dx, dx_rows, self.f_rows, self.f_cols, self.input_shape[0], self.input_shape[1], 
                                                    num_padded_rows, num_padded_cols, int(self.num_row_patches), int(self.num_col_patches),
                                                    self.stride))
             # unpad

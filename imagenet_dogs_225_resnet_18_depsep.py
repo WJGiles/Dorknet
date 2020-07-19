@@ -7,7 +7,6 @@ from layers.dense_layer import DenseLayer
 from layers.convolution import ConvLayer
 from layers.depthwise_convolution import DepthwiseConvLayer
 from layers.pointwise_convolution import PointwiseConvLayer
-from layers.basic_residual_block import BasicResidualBlock
 from layers.residual_block import ResidualBlock
 from layers.activations import ReLu
 from layers.pooling import GlobalAveragePoolingLayer
@@ -176,7 +175,7 @@ if __name__ == "__main__":
                                       image_size=(225,225),
                                       crop_mode="center")
 
-    experiment_name = "DogsImageNet225ResNet18DepSepREFACTORTEST"
+    experiment_name = "DogsImageNet225ResNet18DepSep"
     logging.basicConfig(filename="logging/" + experiment_name + '.log',level=logging.DEBUG)
     logging.getLogger().addHandler(logging.StreamHandler())
     network = ResNet18(experiment_name, load_layers=True)
@@ -220,7 +219,7 @@ if __name__ == "__main__":
             test_acc = network.test(network, val_data_loader.pull_batch(int(120*50/BATCH_SIZE)), BATCH_SIZE, 120*50)
             logging.info("Test acc: {}".format(test_acc))
             network.save_weights_to_h5(os.path.join(experiment_name, "epoch_{}_testacc_{}.h5".format(e, test_acc)))
-    except KeyboardInterrupt:
+    except Exception:
         train_data_loader.stop_thread()
         val_data_loader.stop_thread()
         raise
