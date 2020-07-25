@@ -41,14 +41,13 @@ class Network:
                         regularisation_terms.append(layer.regulariser_forward())
         loss += sum(regularisation_terms)
     
-        return loss, X # NB if test_mode=True, you get softmax scores (logits)
+        return loss, X # NB if test_mode=True, you get softmax scores ("logits")
 
     def backward(self):
         for layer in self.layers[::-1]:
             if getattr(layer, "is_loss", None):
                 upstream_dx = layer.backward()
             else:
-                #if layer.type != "learnable_conv":
                 upstream_dx = layer.backward(upstream_dx)
 
     def test(self, data_loader, batch_size, test_set_size):
@@ -84,10 +83,7 @@ class Network:
             del json_structure['name']
 
             for layer_name in json_structure.keys():
-                print(layer_name)
                 l_type = f[layer_name + "/layer_info"].attrs["type"]
-                print(l_type)
-                # if/elif over layer types
                 if l_type == "ConvLayer":
                     l = ConvLayer(layer_name)
                 elif l_type == "BatchNormLayer":

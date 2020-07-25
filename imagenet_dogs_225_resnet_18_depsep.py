@@ -15,6 +15,7 @@ from layers.losses import SoftmaxWithCrossEntropy
 from regularisers.l2 import l2
 from data_loading.image_data_loader import ImageDataLoader
 from data_loading.image_augmentation import ImageAugmenter
+from data_loading.image_preprocessor import ImagePreprocessor
 from optimisers.RMSProp import RMSProp
 from optimisers.SGDMomentum import SGDMomentum
 
@@ -163,18 +164,22 @@ if __name__ == "__main__":
     augmenter = ImageAugmenter(hsv_pert_tuples=[(0.9,1.1), (0.5,2.0), (0.5,2.0)],
                                rotation_tuple=(-15,15),
                                horizontal_flip_prob=0.5)
+    train_preprocessor = ImagePreprocessor(image_size=(225,225),
+                                           crop_mode="random",
+                                           image_augmenter=augmenter)
     train_data_loader = ImageDataLoader(os.path.join(data_folder, "ImageNet2012/ILSVRC2012_dogs/train_img"),
                                         BATCH_SIZE,
-                                        image_size=(225,225),
+                                        train_preprocessor,
                                         class_balance=False,
-                                        image_augmenter=augmenter,
-                                        mixup_range_tuple=(0, 0.3),
-                                        crop_mode="random")
+                                        mixup_range_tuple=(0, 0.3))
+    val_preprocessor = ImagePreprocessor(image_size=(225,225),
+                                         crop_mode="center")
     val_data_loader = ImageDataLoader(os.path.join(data_folder, "ImageNet2012/ILSVRC2012_dogs/val_img"),
                                       BATCH_SIZE,
-                                      image_size=(225,225),
-                                      crop_mode="center")
+                                      val_preprocessor)
 
+    restart = False
+    starting_epoch = 1
     experiment_name = "DogsImageNet225ResNet18DepSep"
     logging.basicConfig(filename="logging/" + experiment_name + '.log',level=logging.DEBUG)
     logging.getLogger().addHandler(logging.StreamHandler())
@@ -182,15 +187,19 @@ if __name__ == "__main__":
     if not os.path.isdir(experiment_name):
         os.mkdir(experiment_name)
     network.save_layer_structure_to_json(os.path.join(experiment_name, experiment_name + ".json"))
-    #network = ResNet18("", load_layers=False)
-    #network.load_network_from_json_and_h5(os.path.join(original_experiment_name, original_experiment_name + ".json"),
-    #                                      os.path.join(old_experiment_name, "epoch_15_testacc_0.4935.h5"))
+
+    if restart:
+        # We're restarting from a previous save point... (the path here is an example)
+        # don't forget to set the right starting epoch!
+        network = ResNet18("", load_layers=False)
+        network.load_network_from_json_and_h5(os.path.join(experiment_name, experiment_name + ".json"),
+                                              os.path.join(experiment_name, "epoch_15_testacc_0.4935.h5"))
     print(network)
     sgd = SGDMomentum(network, 0.05*(BATCH_SIZE/200.0), 0.9)
     logging.info(network)
 
     try:
-        for e in range(1, 40, 1):
+        for e in range(starting_epoch, 40, 1):
             running_loss_average = None
             logging.info("Epoch {}:".format(e))
             logging.info("Shuffling data: ")
@@ -216,7 +225,7 @@ if __name__ == "__main__":
                                                                 loss,
                                                                 correct_total/(i*BATCH_SIZE)))
             logging.info("Testing...")
-            test_acc = network.test(network, val_data_loader.pull_batch(int(120*50/BATCH_SIZE)), BATCH_SIZE, 120*50)
+            test_acc = network.test(val_data_loader.pull_batch(int(120*50/BATCH_SIZE)), BATCH_SIZE, 120*50)
             logging.info("Test acc: {}".format(test_acc))
             network.save_weights_to_h5(os.path.join(experiment_name, "epoch_{}_testacc_{}.h5".format(e, test_acc)))
     except Exception:

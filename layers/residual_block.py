@@ -103,7 +103,6 @@ class ResidualBlock:
         layer_type_list = open_f[self.layer_name + '/layer_info'].attrs['layer_type_list']
         layer_name_list = open_f[self.layer_name + '/layer_info'].attrs['layer_name_list']
         for l_type, layer_name in zip(layer_type_list, layer_name_list):
-                print(l_type, layer_name)
                 if l_type == "ConvLayer":
                     l = ConvLayer(layer_name)
                 elif l_type == "BatchNormLayer":

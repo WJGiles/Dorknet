@@ -3,6 +3,7 @@ from tqdm import tqdm
 import numpy as np
 import cupy as cp
 from data_loading.image_data_loader import ImageDataLoader
+from data_loading.image_preprocessor import ImagePreprocessor
 from imagenet_dogs_225_resnet_18_depsep import ResNet18
 
 BATCH_SIZE = 60
@@ -63,6 +64,7 @@ val_data_loader = ImageDataLoader(os.path.join(data_folder, "ImageNet2012/ILSVRC
                                  BATCH_SIZE,
                                  image_size=(225,225),
                                  crop_mode="center", start_thread=False)
+preprocessor = ImagePreprocessor(image_size=(225,225), crop_mode="center")
 
 experiment_name = "DogsImageNet225ResNet18DepSep"
 num_to_dog_name_map_fname = "./imagenet_dog_class_names/num_to_dog_name_map.json"
