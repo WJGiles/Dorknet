@@ -8,7 +8,6 @@ Artisanal CNNs.
 * Class activation maps (CAM) for visualising image regions responsible for predictions
 * Work in progress!
 
-
 ## Installation
  
 * Python Virtual Environment - you might need to change the version of cupy to match your version of Cuda and/or driver setup. Please check out the cupy installation guides for this, it's pleasingly straightforward.
@@ -24,7 +23,7 @@ Artisanal CNNs.
 * Docker
    * The Docker directory in this repo provides scripts for building and running Dorknet images based on an Intel Python distribution image (which I've found offers a really useful speedup when running in CPU only mode), and an official cupy container. You'll need to adjust paths in volume mappings in the the 'run' scripts to make your datasets visible within the container when running these.
 
-* There is a release with a zip file containing a trained model - the one used in generating the CAM images below.
+* There is a release with a zip file containing a trained model - the one used in generating the CAM images below. It's a slight variation on a ResNet18 with depthwise separable convolution layers.
 
 ## Use
 

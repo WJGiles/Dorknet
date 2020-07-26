@@ -23,14 +23,14 @@ def forward_to_named_layer(network, X, layer_name):
     return None
 
 def returnCAM(feature_conv, weight_softmax, class_idx):
-    # generate the class activation maps upsample to 224x224
-    size_upsample = (224, 224)
-    bz, nc, height, width = feature_conv.shape
+    # generate the class activation maps upsample to 225x225
+    size_upsample = (225, 225)
+    bz, chans, height, width = feature_conv.shape
 
     output_cam = []
     for idx in class_idx:
-        cam = weight_softmax[idx, :].dot(feature_conv.reshape((nc, height * width)))
-        cam = cam.reshape(h, w)
+        cam = weight_softmax[idx, :].dot(feature_conv.reshape((chans, height * width)))
+        cam = cam.reshape(height, width)
         cam = cv2.resize(cam, size_upsample)
         cam = np.maximum(cam, 0)
         cam = cam - np.min(cam)
@@ -60,10 +60,6 @@ def show_cam_on_image(img, mask):
 
     return np.uint8(255 * cam)
 
-val_data_loader = ImageDataLoader(os.path.join(data_folder, "ImageNet2012/ILSVRC2012_dogs/val_img"),
-                                 BATCH_SIZE,
-                                 image_size=(225,225),
-                                 crop_mode="center", start_thread=False)
 preprocessor = ImagePreprocessor(image_size=(225,225), crop_mode="center")
 
 experiment_name = "DogsImageNet225ResNet18DepSep"
@@ -80,7 +76,7 @@ for l in network.layers:
 
 for im_path in os.listdir(im_dir):
     if not(os.path.isdir(os.path.join(im_dir, im_path))):
-        im = val_data_loader.load_image(os.path.join(im_dir, im_path))
+        im = preprocessor.load_image(os.path.join(im_dir, im_path))
         X = im.reshape((1,) + im.shape)
         loss, batch_scores = network.forward(X,
                                             y_one_hot=None,
@@ -96,12 +92,3 @@ for im_path in os.listdir(im_dir):
                 output_cam,
                 [num_to_dog_name_map[str(b)] for b in best[:3]]
         )
-
-        print("###########################")
-        for i in range(5):
-            print(im_path, best[i], scores[best[i]], num_to_dog_name_map[str(best[i])])
-        plain_im = cv2.imread(os.path.join(im_dir, im_path))
-        print(plain_im.shape)
-        cv2.putText(plain_im, num_to_dog_name_map[str(best[0])], (int(plain_im.shape[0]/10),int(plain_im.shape[1]/10)),
-                    cv2.FONT_HERSHEY_SIMPLEX, min(plain_im.shape[0], plain_im.shape[1])/1000, (0, 255, 100), 5)
-        cv2.imwrite(os.path.join(im_dir, "outputs", im_path), plain_im)
