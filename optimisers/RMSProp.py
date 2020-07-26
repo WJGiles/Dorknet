@@ -5,8 +5,14 @@ profile = lambda x: x
 class RMSProp:
     def __init__(self, network, learning_rate, decay_rate):
         self.network = network
-        self.num_workers = 2
-        self.learnable_layers = [l for l in network.layers if hasattr(l, "learned_params")]
+        self.learnable_layers = []
+        for layer in network.layers:
+            if hasattr(layer, "learned_params"):
+                self.learnable_layers.append(layer)
+            if hasattr(layer, "layer_list"): # For composite layers like ResidualBlock
+                for l in layer.layer_list:
+                    if hasattr(l, "learned_params"):
+                        self.learnable_layers.append(l)
         self.learning_rate = learning_rate
         self.decay_rate = decay_rate
         self.grad_cache = {layer: {k: np.zeros_like(v) for k, v in layer.grads.items()}
@@ -18,18 +24,13 @@ class RMSProp:
     def multiply_learning_rate(self, multiplier):
         self.learning_rate *= multiplier
 
-    def update_layer(self, layer):
-        for param in layer.learned_params.keys():
-            self.grad_cache[layer][param] = (
-                self.decay_rate*self.grad_cache[layer][param] + 
-                (1 - self.decay_rate)*np.power(layer.grads[param],2)
-            )
-            dx = - self.learning_rate*layer.grads[param]/np.sqrt(self.grad_cache[layer][param] + 1e-5)
-            layer.learned_params[param] += dx
-
     @profile
     def update_weights(self):
-        #with Pool(self.num_workers) as p:
-        #    p.map(self.update_layer, self.learnable_layers)
         for layer in self.learnable_layers:
-            self.update_layer(layer)
+            for param in layer.learned_params.keys():
+                self.grad_cache[layer][param] = (
+                    self.decay_rate*self.grad_cache[layer][param] + 
+                    (1 - self.decay_rate)*np.power(layer.grads[param],2)
+                )
+                dx = - self.learning_rate*layer.grads[param]/np.sqrt(self.grad_cache[layer][param] + 1e-5)
+                layer.learned_params[param] += dx
