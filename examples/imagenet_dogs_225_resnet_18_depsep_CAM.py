@@ -4,7 +4,7 @@ import numpy as np
 import cupy as cp
 from data_loading.image_data_loader import ImageDataLoader
 from data_loading.image_preprocessor import ImagePreprocessor
-from imagenet_dogs_225_resnet_18_depsep import ResNet18
+from examples.imagenet_dogs_225_resnet_18_depsep import ResNet18
 
 BATCH_SIZE = 60
 data_folder = "/home/will/Datasets"

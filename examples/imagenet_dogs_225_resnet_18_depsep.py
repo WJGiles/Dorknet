@@ -2,7 +2,7 @@ import numpy as np
 import cupy as cp
 from tqdm import tqdm
 import os, json, logging, h5py
-from network import Network
+from network.network import Network
 from layers.dense_layer import DenseLayer
 from layers.convolution import ConvLayer
 from layers.depthwise_convolution import DepthwiseConvLayer
@@ -16,7 +16,6 @@ from regularisers.l2 import l2
 from data_loading.image_data_loader import ImageDataLoader
 from data_loading.image_augmentation import ImageAugmenter
 from data_loading.image_preprocessor import ImagePreprocessor
-from optimisers.RMSProp import RMSProp
 from optimisers.SGDMomentum import SGDMomentum
 
 #import line_profiler

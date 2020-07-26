@@ -4,7 +4,7 @@ import numpy as np
 import cupy as cp
 from data_loading.image_data_loader import ImageDataLoader
 from data_loading.image_preprocessor import ImagePreprocessor
-from imagenet_dogs_225_resnet_18_depsep import ResNet18
+from examples.imagenet_dogs_225_resnet_18_depsep import ResNet18
 
 BATCH_SIZE = 60
 data_folder = "/home/will/Datasets"
@@ -30,6 +30,9 @@ if verify_accuracy:
     test_acc = network.test(val_data_loader.pull_batch(int(120*50/BATCH_SIZE)), BATCH_SIZE, 120*50)
     val_data_loader.stop_thread()
     print("Test acc: {}".format(test_acc))
+
+if not os.path.isdir(os.path.join(im_dir, "outputs")):
+    os.mkdir(os.path.join(im_dir, "outputs"))
 
 for im_path in os.listdir(im_dir):
     if not(os.path.isdir(os.path.join(im_dir, im_path))):

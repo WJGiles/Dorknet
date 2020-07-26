@@ -2,7 +2,6 @@ import numpy as np
 import cupy as cp
 import im2col
 import sys
-np.set_printoptions(threshold=sys.maxsize)
 import itertools, time
 #import line_profiler
 from regularisers import l2
