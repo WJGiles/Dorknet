@@ -2,20 +2,8 @@ import numpy as np
 import os
 
 """
-Old code for loading MNIST
+Code for loading MNIST
 """
-
-def epoch_generator(X_full, y_full, batch_size=100):
-    shuffle_indices = np.random.permutation(X_full.shape[0])
-    X_full = X_full[shuffle_indices, :]
-    y_full = y_full[shuffle_indices]
-    index = 0
-    for i in range(int(X_full.shape[0]/batch_size)):
-        X_batch = X_full[index:index+batch_size, :]
-        y_batch = y_full[index:index+batch_size]
-        index += batch_size
-
-        yield X_batch, y_batch
 
 def epoch_image_generator(X_full, y_full, batch_size=1, num_classes=10):
     shuffle_indices = np.random.permutation(X_full.shape[0])
@@ -32,7 +20,7 @@ def epoch_image_generator(X_full, y_full, batch_size=1, num_classes=10):
 
 def get_MNIST_data(num_training=59000, num_validation=1000, num_test=10000):
 
-    mnist_dir = 'data/MNIST' 
+    mnist_dir = 'MNIST_data' 
     X_train = np.load(os.path.join(mnist_dir, 'MNISTTrainImages.npy')).astype(np.float32) 
     y_train = np.load(os.path.join(mnist_dir, 'MNISTTrainLabels.npy')).astype(np.int32) 
     X_test = np.load(os.path.join(mnist_dir, 'MNISTTestImages.npy')).astype(np.float32) 

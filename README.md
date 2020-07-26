@@ -21,11 +21,16 @@ Artisanal CNNs.
 * Docker
    * The Docker directory in this repo provides scripts for building and running Dorknet images based on an Intel Python distribution image (which I've found offers a really useful speedup when running in CPU only mode), and an official cupy container. You'll need to adjust paths in volume mappings in the the 'run' scripts to make your datasets visible within the container when running these.
 
+To get started with the obligatory MNIST example, try
+
+   `bash scripts/download_MNIST.sh`
+   `python -m examples.MNIST_basic_convnet`
+
 There is a release with a zip file containing a trained model - the one used in generating the CAM images below. It's a slight variation on a ResNet18 with depthwise separable convolution layers.
 
-Now you can start looking at the examples and adapting them for your data. For example, if you've got the model mentioned above and unzipped it in your Dorknet directory, try 
+If you've got the model mentioned above and unzipped it in your Dorknet directory, you can have a go with;
 
-   `python -m examples.imagenet_dogs_resnet_18_depsep_CAM.py`
+   `python -m examples.imagenet_dogs_resnet_18_depsep_CAM`
 
 ## Use
 

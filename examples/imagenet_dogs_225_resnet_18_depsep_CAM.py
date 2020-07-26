@@ -7,7 +7,6 @@ from data_loading.image_preprocessor import ImagePreprocessor
 from examples.imagenet_dogs_225_resnet_18_depsep import ResNet18
 
 BATCH_SIZE = 60
-data_folder = "/home/will/Datasets"
 im_dir = "./dog_images"
 number_of_classes = 120
 
@@ -92,3 +91,5 @@ for im_path in os.listdir(im_dir):
                 output_cam,
                 [num_to_dog_name_map[str(b)] for b in best[:3]]
         )
+
+print("CAM complete, results saved in CAM_outputs directory")

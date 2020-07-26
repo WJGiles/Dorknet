@@ -9,7 +9,7 @@ from examples.imagenet_dogs_225_resnet_18_depsep import ResNet18
 BATCH_SIZE = 60
 data_folder = "/home/will/Datasets"
 im_dir = "./dog_images"
-verify_accuracy = True
+verify_accuracy = False
 preprocessor = ImagePreprocessor(image_size=(225,225), crop_mode="center")
 
 experiment_name = "DogsImageNet225ResNet18DepSep"
