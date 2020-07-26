@@ -24,6 +24,7 @@ Artisanal CNNs.
 To get started with the obligatory MNIST example, try
 
    `bash scripts/download_MNIST.sh`
+   
    `python -m examples.MNIST_basic_convnet`
 
 There is a release with a zip file containing a trained model - the one used in generating the CAM images below. It's a slight variation on a ResNet18 with depthwise separable convolution layers.
