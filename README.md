@@ -18,6 +18,8 @@ Artisanal CNNs.
 
   `pip install -r requirements.txt`
 
+  `python setup.py build_ext install`
+
 * Docker
    * The Docker directory in this repo provides scripts for building and running Dorknet images based on an Intel Python distribution image (which I've found offers a really useful speedup when running in CPU only mode), and an official cupy container. You'll need to adjust paths in volume mappings in the the 'run' scripts to make your datasets visible within the container when running these.
 
