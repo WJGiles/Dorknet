@@ -6,36 +6,36 @@ class DenseLayer:
 
     def __init__(self, layer_name, incoming_chans=None, output_dim=None, with_bias=True,
                  weight_regulariser=None, weight_initialiser="normal"):
-        self.use_cp = True
+        #np.random.seed(9)
+
+        self.is_on_gpu = False
         self.layer_name = layer_name
         self.incoming_chans = incoming_chans
         self.output_dim = output_dim
         self.with_bias = with_bias
         self.weight_regulariser = weight_regulariser
-        self.numpy_or_cupy = np #cp if self.use_cp else np
         self.downstream_X = None
         self.weight_initialiser = weight_initialiser
 
         if incoming_chans is not None and output_dim is not None:
             if self.weight_initialiser == "glorot_uniform":
-                limit = self.numpy_or_cupy.sqrt(6.0 / (self.incoming_chans + self.output_dim))
-                weights = self.numpy_or_cupy.random.uniform(low=-limit,
+                limit = np.sqrt(6.0 / (self.incoming_chans + self.output_dim))
+                weights = np.random.uniform(low=-limit,
                                             high=limit,
                                             size=(self.incoming_chans, 
-                                                self.output_dim)).astype(self.numpy_or_cupy.float32)
+                                                self.output_dim)).astype(np.float32)
             elif self.weight_initialiser == "normal":
-                weights = 0.01*self.numpy_or_cupy.random.randn(self.incoming_chans, self.output_dim).astype(self.numpy_or_cupy.float32)
+                weights = 0.01*np.random.randn(self.incoming_chans, self.output_dim).astype(np.float32)
             self.learned_params = {"weights": weights}
-            self.grads = {"weights": self.numpy_or_cupy.zeros_like(weights)}
+            self.grads = {"weights": np.zeros_like(weights)}
             
             if with_bias:
-                bias = self.numpy_or_cupy.zeros(output_dim).astype(self.numpy_or_cupy.float32)
+                bias = np.zeros(output_dim).astype(np.float32)
                 self.learned_params.update({"bias": bias})
-                self.grads.update({"bias": self.numpy_or_cupy.zeros_like(bias, dtype=self.numpy_or_cupy.float32)})
+                self.grads.update({"bias": np.zeros_like(bias, dtype=np.float32)})
         else:
             self.learned_params = {}
             self.grads = {}
-            
 
     def __repr__(self):
         return "DenseLayer({}, incoming_chans={}, output_dim={}, weight_regulariser={})".format(
@@ -45,33 +45,39 @@ class DenseLayer:
                                        repr(self.weight_regulariser)
                                        )
 
+    def to_gpu(self):
+        if self.is_on_gpu:
+            print("Layer {} is already on GPU, ignoring request".format(self.layer_name))
+        else:
+            # move learned_params and grads to gpu
+            for k, v in self.learned_params.items():
+                self.learned_params[k] = cp.asarray(self.learned_params[k])
+            for k, v  in self.grads.items():
+                self.grads[k] = cp.asarray(self.learned_params[k])
+            self.is_on_gpu = True
+
     def forward(self, X, test_mode=False):
         xp = cp.get_array_module(X)
         if not test_mode:
             self.downstream_X = X
-        if self.use_cp:
-            out = xp.dot(X, cp.asarray(self.learned_params["weights"]))
-            if self.with_bias:
-                out += cp.asarray(self.learned_params["bias"][xp.newaxis, :])
-        else: 
-            out = xp.dot(X, self.learned_params["weights"])
-            if self.with_bias:
-                out += self.learned_params["bias"][xp.newaxis, :]
+
+        out = xp.dot(X, self.learned_params["weights"])
+        if self.with_bias:
+            out += self.learned_params["bias"][xp.newaxis, :]
+
         return out
 
     def backward(self, upstream_dx):
         xp = cp.get_array_module(upstream_dx)
         if self.with_bias:
-            self.grads["bias"] = cp.asnumpy(xp.sum(upstream_dx, axis=0))
-        self.grads["weights"] = cp.asnumpy(xp.dot(self.downstream_X.T, upstream_dx))
+            self.grads["bias"] = xp.sum(upstream_dx, axis=0)
+        self.grads["weights"] = xp.dot(self.downstream_X.T, upstream_dx)
         if self.weight_regulariser:
             self.grads["weights"] += (
                 self.weight_regulariser.backward(self.learned_params["weights"])
             )
-        if self.use_cp:
-            return xp.dot(upstream_dx, cp.asarray(self.learned_params["weights"].T))
-        else:
-            return xp.dot(upstream_dx, self.learned_params["weights"].T)
+
+        return xp.dot(upstream_dx, self.learned_params["weights"].T)
 
     def regulariser_forward(self):
         out = 0

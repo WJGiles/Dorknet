@@ -15,6 +15,7 @@ from layers.losses import SoftmaxWithCrossEntropy
 class Network:
     def __init__(self, name):
         self.name = name
+        self.is_on_gpu = False
         self.layers = []
 
     def __repr__(self):
@@ -26,6 +27,19 @@ class Network:
 
     def add_layer(self, layer):
         self.layers.append(layer)
+
+    def to_gpu(self):
+        if self.is_on_gpu:
+            print("Model already on GPU, ignoring request")
+        else:
+            try:
+                for layer in self.layers:
+                    layer.to_gpu()
+                self.is_on_gpu = True
+            except Exception as e:
+                print("Error putting layer {} on GPU, error was: {}".format(layer, e))
+                raise e # You probably want to fall back on CPU, should implement this...
+
 
     def forward(self, X, y_one_hot, test_mode=False):
         loss = 0
@@ -54,9 +68,11 @@ class Network:
         test_correct_total = 0
         for X_test_batch, y_test_batch, _ in tqdm(data_loader,
                                             total=test_set_size/batch_size):
+            if self.is_on_gpu:
+                X_test_batch = cp.asarray(X_test_batch)
             _, batch_scores = self.forward(X_test_batch,
-                                            y_one_hot=None,
-                                            test_mode=True)
+                                           y_one_hot=None,
+                                           test_mode=True)
             test_correct_total += np.sum(y_test_batch == np.argmax(cp.asnumpy(batch_scores), axis=1))
 
         test_acc = float(test_correct_total) / test_set_size

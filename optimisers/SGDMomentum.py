@@ -3,8 +3,8 @@ import cupy as cp
 
 class SGDMomentum:
     def __init__(self, network, learning_rate, momentum):
-        self.use_cp = True
-        self.numpy_or_cupy = cp if self.use_cp else np
+        # self.use_cp = True
+        # self.numpy_or_cupy = cp if self.use_cp else np
         self.network = network
         self.learnable_layers = []
         for layer in network.layers:

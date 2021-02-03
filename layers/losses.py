@@ -10,8 +10,10 @@ class SoftmaxWithCrossEntropy:
     def __repr__(self):
         return "SoftmaxWithCrossEntropy({})".format(self.layer_name)
 
+    def to_gpu(self):
+        pass
+
     def forward(self, X, y_one_hot=None, test_mode=False):
-        #X = cp.asnumpy(X)
         xp = cp.get_array_module(X, y_one_hot)
         e = xp.exp(X)
         X = (1.0/xp.sum(e, axis=1)).reshape(-1,1)*e
@@ -22,7 +24,8 @@ class SoftmaxWithCrossEntropy:
         #loss = (1/float(X.shape[0]))*np.sum(-np.log(X[range(X.shape[0]), y]))
         loss = (1/float(X.shape[0]))*xp.sum(-xp.log(xp.einsum("bij,bjk->b",
                                                               X.reshape(X.shape[0], 1, X.shape[1]),
-                                                              self.y_one_hot.reshape(X.shape[0], self.y_one_hot.shape[1], 1))))
+                                                              self.y_one_hot.reshape(X.shape[0],
+                                                              self.y_one_hot.shape[1], 1))))
         return loss, X
 
     def backward(self):

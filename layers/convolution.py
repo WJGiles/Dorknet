@@ -11,7 +11,7 @@ profile = lambda x: x
 class ConvLayer:
     def __init__(self, layer_name, filter_block_shape=None, stride=1, padding=1,
                  with_bias=True, weight_regulariser=None, weight_initialiser="normal"):
-        self.use_cp = True
+        self.is_on_gpu = False
         self.layer_name = layer_name
         self.stride = stride
         self.padding = padding
@@ -37,9 +37,6 @@ class ConvLayer:
             self.learned_params = {}
             self.grads = {}
 
-        if self.use_cp:
-            self.im2col_kernel, self.row2im_kernel = self.get_kernels()
-
     def __repr__(self):
         out = "ConvLayer({}, ".format(self.layer_name)
         if self.num_filters is not None:
@@ -53,17 +50,29 @@ class ConvLayer:
                                                              self.weight_regulariser)
         return out
 
+    def to_gpu(self):
+        if self.is_on_gpu:
+            print("Layer already on GPU, ignoring request")
+        else:
+            self.im2col_kernel, self.row2im_kernel = self.get_kernels()
+            # move learned_params and grads to gpu
+            for k, v in self.learned_params.items():
+                self.learned_params[k] = cp.asarray(self.learned_params[k])
+            for k, v  in self.grads.items():
+                self.grads[k] = cp.asarray(self.learned_params[k])
+            self.is_on_gpu = True
+
     @profile
     def forward(self, X, test_mode=False):
-        if self.use_cp:
-            X = cp.asarray(X)
+        # if self.is_on_gpu:
+        #     X = cp.asarray(X)
         self.input_shape = X.shape
         if self.padding > 0:
             X = self.pad_input(X)
 
         flat_filter = self.learned_params["weights"].reshape((-1, self.f_rows*self.f_cols*self.filter_chans))
         
-        if self.use_cp:
+        if self.is_on_gpu:
             self.num_row_patches = ((X.shape[2] - self.f_rows)/self.stride) + 1
             self.num_col_patches = ((X.shape[3] - self.f_cols)/self.stride) + 1
             self.patches = cp.zeros((X.shape[0]*int(self.num_row_patches)*int(self.num_col_patches),
@@ -72,7 +81,7 @@ class ConvLayer:
             self.im2col_kernel((numThreadBlocks,), (1024,), (X, self.patches, self.f_rows, self.f_cols,
                                                    X.shape[0], self.filter_chans, X.shape[-2], X.shape[-1], 
                                                    int(self.num_row_patches), int(self.num_col_patches), self.stride))
-            out = cp.asnumpy(cp.dot(cp.asarray(self.patches), cp.asarray(flat_filter.T)))
+            out = cp.dot(cp.asarray(self.patches), cp.asarray(flat_filter.T))
         else:
             self.patches, self.num_row_patches, self.num_col_patches = im2col.im2col_cy(
                                                          X,
@@ -92,16 +101,16 @@ class ConvLayer:
             self.grads["bias"] = np.sum(upstream_dx, axis=(0,2,3))
         upstream_dx = upstream_dx.transpose(0,2,3,1) # Undo the transpose from forward pass
         upstream = upstream_dx.reshape(self.patches.shape[0], -1)
-        if self.use_cp:
-            self.grads["weights"] = cp.asnumpy(cp.dot(cp.asarray(upstream.T), cp.asarray(self.patches))).reshape(self.learned_params["weights"].shape)
+        if self.is_on_gpu:
+            self.grads["weights"] = cp.dot(upstream.T, self.patches).reshape(self.learned_params["weights"].shape)
         else:
             self.grads["weights"] = np.dot(upstream.T, self.patches).reshape(self.learned_params["weights"].shape)
         if self.weight_regulariser:
             self.grads["weights"] += self.weight_regulariser.backward(self.learned_params["weights"])
         upstream = upstream_dx.reshape(-1, self.num_filters)
         flat_filter = self.learned_params["weights"].reshape((-1, self.f_rows*self.f_cols*self.filter_chans))
-        if self.use_cp:
-            dx_rows = cp.dot(cp.asarray(upstream), cp.asarray(flat_filter))
+        if self.is_on_gpu:
+            dx_rows = cp.dot(upstream, flat_filter)
             num_padded_rows = int(self.stride*(self.num_row_patches - 1) + self.f_rows)
             num_padded_cols = int(self.stride*(self.num_col_patches - 1) + self.f_cols)
             padded_dx = cp.zeros((self.input_shape[0], self.input_shape[1], num_padded_rows, num_padded_cols), dtype=cp.float32)

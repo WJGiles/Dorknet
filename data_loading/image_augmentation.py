@@ -71,22 +71,3 @@ class ImageAugmenter:
 
         return im
 
-
-if __name__ == "__main__":
-    hsv_perts = [(0.9,1.1), (0.5,1.5), (0.5,1.5)]
-    translation_tuple = None
-    rotation_tuple = (-10, 10)
-    augmenter = ImageAugmenter(hsv_pert_tuples=hsv_perts,
-                               rotation_tuple=rotation_tuple,
-                               translation_tuple=translation_tuple,
-                               horizontal_flip_prob=0.5)
-    for e, i in enumerate(range(35)):
-        #im_path = "/home/will/Datasets/ImageNet2012/ILSVRC2012_dogs/train/n02085620/n02085620_7.JPEG"
-        im_path = "/home/will/Datasets/ImageNet2012/ILSVRC2012_dogs/train/n02085620/n02085620_286.JPEG"
-        im = cv2.imread(im_path)
-        perturbed = augmenter.augment(im)
-        #perturbed_out = "{}_hsv_perturbed_{}_{}_{}.jpg".format(
-        #    os.path.split(im_path)[-1].split(".")[0], pert_proportion[0], pert_proportion[1], pert_proportion[2]
-        #    )
-        perturbed_out = "{}.jpg".format(e)
-        cv2.imwrite(perturbed_out, perturbed)

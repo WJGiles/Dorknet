@@ -4,16 +4,18 @@ import relu_cy
 
 class ReLu:
 
-    def __init__(self, layer_name, use_np=False):
-        self.use_cp = True
+    def __init__(self, layer_name):
+        self.is_on_gpu = False
         self.layer_name = layer_name
-        self.use_np = use_np
 
     def __repr__(self):
         return "ReLu({})".format(self.layer_name)
 
+    def to_gpu(self):
+        self.is_on_gpu = True
+
     def forward(self, X, test_mode=False):
-        if self.use_cp:
+        if self.is_on_gpu:
             out = self.forward_cp(X, test_mode=test_mode)
         else:
             if X.ndim == 4:
@@ -43,12 +45,12 @@ class ReLu:
         return out
 
     def backward(self, upstream_dx): 
-        if self.use_cp:
+        if self.is_on_gpu:
             return cp.multiply(cp.asarray(upstream_dx), cp.asarray(self.positive_locs))
         #else:
         #xp = cp.get_array_module(upstream_dx, self.positive_locs)
 
-        return cp.asarray(np.multiply(cp.asnumpy(upstream_dx), cp.asnumpy(self.positive_locs)))
+        return np.multiply(upstream_dx, self.positive_locs)
 
     def save_to_h5(self, open_f, save_grads=True):
         base_dset = open_f.create_dataset(self.layer_name + "/layer_info", dtype=np.float32)

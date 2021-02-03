@@ -20,6 +20,9 @@ class GlobalAveragePoolingLayer:
             self.layer_name
         )
 
+    def to_gpu(self):
+        pass
+
     def forward(self, X, test_mode=False):
         self.spatial_shape = (X.shape[-2], X.shape[-1])
         xp = cp.get_array_module(X)

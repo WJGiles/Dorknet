@@ -85,7 +85,7 @@ for e in range(1, 15, 1):
                                                                 BATCH_SIZE,
                                                                 num_classes=10
                                                             ), 
-                                                total=50000/BATCH_SIZE)):
+                                                            total=50000/BATCH_SIZE)):
         loss, batch_scores = network.forward(X_batch, y_one_hot)
         #print(loss)
         network.backward()

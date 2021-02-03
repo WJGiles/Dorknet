@@ -102,7 +102,7 @@ class DepthwiseConvLayer:
         return out
 
     def get_kernels(self):
-        forward_kernel = cp.RawKernel(r'''
+        forward_kernel = cp.RawKernel("""
             extern "C" __global__
             void forward_conv(const float* f, const float* x, float* z,
                     int batch_size, int num_chans, int num_rows, int num_cols,
@@ -118,7 +118,7 @@ class DepthwiseConvLayer:
                     }
                 }
             }
-            ''', 'forward_conv')
+            """, 'forward_conv')
         backward_kernel = cp.RawKernel("""
             extern "C" __global__ 
             void backward_conv(float* upstream_dx, float* X, float* w, float* padded_dx, float* dw,
