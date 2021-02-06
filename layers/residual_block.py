@@ -35,6 +35,7 @@ class ResidualBlock:
                                Out
     """
     def __init__(self, layer_name, layer_list=None, skip_projection=None, post_skip_activation=None):
+        self.is_on_gpu = False
         self.layer_name = layer_name
         self.layer_list = layer_list
         self.skip_projection = skip_projection
@@ -47,6 +48,19 @@ class ResidualBlock:
         return "ResidualBlock({}, layer_list={}, skip_projection={}, post_skip_activation={})".format(
             self.layer_name, self.layer_list, self.skip_projection, self.post_skip_activation
         )
+
+    def to_gpu(self):
+        if self.is_on_gpu:
+            print("Layer already on GPU, ignoring request")
+        else:
+            # move learned_params and grads to gpu
+            for layer in self.layer_list:
+                layer.to_gpu()
+            if self.skip_projection is not None:
+                self.skip_projection.to_gpu()
+            if self.post_skip_activation is not None:
+                self.post_skip_activation.to_gpu()
+            self.is_on_gpu = True
         
     def forward(self, X, test_mode=False):
         X_tmp = self.layer_list[0].forward(X, test_mode=test_mode)
@@ -76,9 +90,9 @@ class ResidualBlock:
             dx = l.backward(dx)
 
         if self.skip_projection is not None:
-            dx_out = cp.asarray(dx) + self.skip_projection.backward(joined_dx)
+            dx_out = dx + self.skip_projection.backward(joined_dx)
         else:
-            dx_out = cp.asarray(dx) + joined_dx
+            dx_out = dx + joined_dx
 
         return dx_out
 

@@ -21,7 +21,8 @@ class SoftmaxWithCrossEntropy:
             return 0, X
         self.y_one_hot = xp.asarray(y_one_hot)
         self.downstream_x = X
-        #loss = (1/float(X.shape[0]))*np.sum(-np.log(X[range(X.shape[0]), y]))
+        ## The line with einsum below is the same as :
+        ## loss = (1/float(X.shape[0]))*np.sum(-np.log(X[range(X.shape[0]), y]))
         loss = (1/float(X.shape[0]))*xp.sum(-xp.log(xp.einsum("bij,bjk->b",
                                                               X.reshape(X.shape[0], 1, X.shape[1]),
                                                               self.y_one_hot.reshape(X.shape[0],

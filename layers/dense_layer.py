@@ -6,7 +6,6 @@ class DenseLayer:
 
     def __init__(self, layer_name, incoming_chans=None, output_dim=None, with_bias=True,
                  weight_regulariser=None, weight_initialiser="normal"):
-        #np.random.seed(9)
 
         self.is_on_gpu = False
         self.layer_name = layer_name
@@ -95,7 +94,7 @@ class DenseLayer:
         dset = open_f.create_dataset(self.layer_name + "/weights", 
                                      self.learned_params['weights'].shape,
                                      dtype=self.learned_params['weights'].dtype)
-        dset[:] = self.learned_params['weights']
+        dset[:] = cp.asnumpy(self.learned_params['weights'])
         if self.weight_regulariser is not None:
             dset.attrs["weight_regulariser_type"] = np.string_(self.weight_regulariser.type)
             dset.attrs["weight_regulariser_strength"] = np.string_(self.weight_regulariser.strength)
@@ -103,18 +102,18 @@ class DenseLayer:
             dset_bias = open_f.create_dataset(self.layer_name + "/bias",
                                               self.learned_params['bias'].shape,
                                               dtype=self.learned_params['bias'].dtype)
-            dset_bias[:] = self.learned_params['bias']
+            dset_bias[:] = cp.asnumpy(self.learned_params['bias'])
         
         if save_grads:
             dset_grads = open_f.create_dataset(self.layer_name + "/grads/weights",
                                                self.grads['weights'].shape,
                                                dtype=self.learned_params['weights'].dtype)
-            dset_grads[:] = self.grads["weights"]
+            dset_grads[:] = cp.asnumpy(self.grads["weights"])
             if self.with_bias:
                 dset_grads_bias = open_f.create_dataset(self.layer_name + "/grads/bias",
                                                         self.grads['bias'].shape,
                                                         dtype=self.learned_params['bias'].dtype)
-                dset_grads_bias[:] = self.grads["bias"]
+                dset_grads_bias[:] = cp.asnumpy(self.grads["bias"])
 
     def load_from_h5(self, open_f, load_grads=True):
         self.incoming_chans = open_f[self.layer_name + '/layer_info'].attrs['incoming_chans']

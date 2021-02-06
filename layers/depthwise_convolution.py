@@ -7,37 +7,36 @@ from regularisers import l2
 class DepthwiseConvLayer:
     def __init__(self, layer_name, filter_block_shape=None,
                  stride=1, padding=1, with_bias=True,
-                 weight_regulariser=None, use_cp=True, weight_initialiser="normal"):
+                 weight_regulariser=None, weight_initialiser="normal"):
         """
         filter_block_shape = (num_incoming_channels, num_filter_rows, num_filter_cols)
         """
-        self.use_cp = use_cp
+        self.is_on_gpu = False
         self.layer_name = layer_name
         self.stride = stride
         self.padding = padding
         self.with_bias = with_bias
         self.weight_regulariser = weight_regulariser
-        self.numpy_or_cupy = np #cp if self.use_cp else np
         self.weight_initialiser = weight_initialiser
         if filter_block_shape is not None:
             self.num_filters, self.f_rows, self.f_cols = filter_block_shape
             if self.weight_initialiser == "glorot_uniform":
-                limit = self.numpy_or_cupy.sqrt(6.0 / (2*self.num_filters))
-                weights = self.numpy_or_cupy.random.uniform(low=-limit,high=limit,size=filter_block_shape).astype(self.numpy_or_cupy.float32)
+                limit = np.sqrt(6.0 / (2*self.num_filters))
+                weights = np.random.uniform(low=-limit,high=limit,size=filter_block_shape).astype(np.float32)
             elif self.weight_initialiser == "normal":
-                weights = 0.01*self.numpy_or_cupy.random.randn(*filter_block_shape).astype(self.numpy_or_cupy.float32)
+                weights = 0.01*np.random.randn(*filter_block_shape).astype(np.float32)
             self.learned_params = {"weights": weights}
-            self.grads = {"weights": self.numpy_or_cupy.zeros_like(weights).astype(self.numpy_or_cupy.float32)}
+            self.grads = {"weights": np.zeros_like(weights).astype(np.float32)}
             if with_bias:
-                bias = self.numpy_or_cupy.zeros(self.num_filters).astype(self.numpy_or_cupy.float32)
+                bias = np.zeros(self.num_filters).astype(np.float32)
                 self.learned_params.update({"bias": bias})
-                self.grads.update({"bias": self.numpy_or_cupy.zeros_like(bias, dtype=self.numpy_or_cupy.float32)})
+                self.grads.update({"bias": np.zeros_like(bias, dtype=np.float32)})
         else:
             self.num_filters = None
             self.learned_params = {}
             self.grads = {}
             
-        if self.use_cp:
+        if self.is_on_gpu:
             self.forward_kernel, self.backward_kernel = self.get_kernels() 
 
     def __repr__(self):
@@ -52,6 +51,18 @@ class DepthwiseConvLayer:
                                                              repr(self.weight_regulariser))
         return out
 
+    def to_gpu(self):
+        if self.is_on_gpu:
+            print("Layer already on GPU, ignoring request")
+        else:
+            self.forward_kernel, self.backward_kernel = self.get_kernels()
+            # move learned_params and grads to gpu
+            for k, v in self.learned_params.items():
+                self.learned_params[k] = cp.asarray(self.learned_params[k])
+            for k, v  in self.grads.items():
+                self.grads[k] = cp.asarray(self.learned_params[k])
+            self.is_on_gpu = True
+
     def pad_input(self, X):
         xp = cp.get_array_module(X)
         return xp.pad(
@@ -62,13 +73,12 @@ class DepthwiseConvLayer:
                 )
 
     def forward(self, X, test_mode=False):
-        if self.use_cp:
+        if self.is_on_gpu:
             return self.forward_cp(X, test_mode=test_mode)
         else:
             return self.forward_cy(X, test_mode=test_mode)
 
     def forward_cy(self, X, test_mode=False):
-        X = cp.asnumpy(X)
         X = self.pad_input(X)
         if not test_mode:
             self.X = X
@@ -82,7 +92,6 @@ class DepthwiseConvLayer:
         return out
 
     def forward_cp(self, X, test_mode=False):
-        X = cp.asarray(X)
         X = self.pad_input(X)
         if not test_mode:
             self.X = X
@@ -98,7 +107,7 @@ class DepthwiseConvLayer:
                                              self.stride))
 
         if self.with_bias:
-            out += cp.asarray(self.learned_params["bias"][np.newaxis, :, np.newaxis, np.newaxis])
+            out += self.learned_params["bias"][np.newaxis, :, np.newaxis, np.newaxis]
         return out
 
     def get_kernels(self):
@@ -175,17 +184,15 @@ class DepthwiseConvLayer:
                                                                 self.num_col_patches)
         if self.with_bias:
             out += self.learned_params["bias"][np.newaxis, :, np.newaxis, np.newaxis]
-
         return out
 
     def backward(self, upstream_dx):
-        if self.use_cp:
+        if self.is_on_gpu:
             return self.backward_cp(upstream_dx)
         else:
             return self.backward_cy(upstream_dx)
 
     def backward_cy(self, upstream_dx):
-        upstream_dx = cp.asnumpy(upstream_dx)
         if self.with_bias:
             self.grads["bias"] = np.sum(upstream_dx, axis=(0,2,3))
         
@@ -198,14 +205,13 @@ class DepthwiseConvLayer:
         return np.array(dx)
 
     def backward_cp(self, upstream_dx):
-        upstream_dx = cp.asarray(upstream_dx)
         if self.with_bias:
             self.grads["bias"] = cp.asnumpy(cp.sum(upstream_dx, axis=(0,2,3)))
 
         padded_dx = cp.zeros(self.X.shape, dtype=cp.float32)
         dw = cp.zeros(self.learned_params["weights"].shape, dtype=cp.float32)
         numThreadBlocks = int((upstream_dx.shape[0]*upstream_dx.shape[1]*self.num_row_patches*self.num_col_patches + 1024 - 1) / 1024)
-        self.backward_kernel((10024,), (1024,), (upstream_dx, self.X, cp.asarray(self.learned_params["weights"]),
+        self.backward_kernel((numThreadBlocks,), (1024,), (upstream_dx, self.X, cp.asarray(self.learned_params["weights"]),
                                                  padded_dx, dw, 
                                                  self.X.shape[-2], self.X.shape[-1], self.X.shape[1], self.X.shape[0],
                                                  int(self.num_row_patches), int(self.num_col_patches), 
@@ -213,7 +219,7 @@ class DepthwiseConvLayer:
                                                  self.learned_params["weights"].shape[-1],
                                                  self.stride, self.padding))
         
-        self.grads["weights"] = cp.asnumpy(dw)
+        self.grads["weights"] = dw
         if self.weight_regulariser:
             self.grads["weights"] += self.weight_regulariser.backward(self.learned_params["weights"])
 
@@ -319,7 +325,7 @@ class DepthwiseConvLayer:
         dset = open_f.create_dataset(self.layer_name + "/weights", 
                                      self.learned_params['weights'].shape,
                                      dtype=self.learned_params['weights'].dtype)
-        dset[:] = self.learned_params['weights']
+        dset[:] = cp.asnumpy(self.learned_params['weights'])
         if self.weight_regulariser is not None:
             dset.attrs["weight_regulariser_type"] = np.string_(self.weight_regulariser.type)
             dset.attrs["weight_regulariser_strength"] = np.string_(self.weight_regulariser.strength)
@@ -327,18 +333,18 @@ class DepthwiseConvLayer:
             dset_bias = open_f.create_dataset(self.layer_name + "/bias",
                                               self.learned_params['bias'].shape,
                                               dtype=self.learned_params['bias'].dtype)
-            dset_bias[:] = self.learned_params['bias']
+            dset_bias[:] = cp.asnumpy(self.learned_params['bias'])
         
         if save_grads:
             dset_grads = open_f.create_dataset(self.layer_name + "/grads/weights",
                                                self.grads['weights'].shape,
                                                dtype=self.learned_params['weights'].dtype)
-            dset_grads[:] = self.grads["weights"]
+            dset_grads[:] = cp.asnumpy(self.grads["weights"])
             if self.with_bias:
                 dset_grads_bias = open_f.create_dataset(self.layer_name + "/grads/bias",
                                                         self.grads['bias'].shape,
                                                         dtype=self.learned_params['bias'].dtype)
-                dset_grads_bias[:] = self.grads["bias"]
+                dset_grads_bias[:] = cp.asnumpy(self.grads["bias"])
 
     def load_from_h5(self, open_f, load_grads=True):
         self.f_cols = open_f[self.layer_name + '/layer_info'].attrs['f_cols']

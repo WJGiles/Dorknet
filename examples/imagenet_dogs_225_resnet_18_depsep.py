@@ -160,6 +160,9 @@ class ResNet18(Network):
             self.add_layer(SoftmaxWithCrossEntropy("softmax1"))
 
 if __name__ == "__main__":
+    use_GPU = True
+    xp = cp if use_GPU else np
+
     augmenter = ImageAugmenter(hsv_pert_tuples=[(0.9,1.1), (0.5,2.0), (0.5,2.0)],
                                rotation_tuple=(-15,15),
                                horizontal_flip_prob=0.5)
@@ -194,6 +197,8 @@ if __name__ == "__main__":
         network.load_network_from_json_and_h5(os.path.join(experiment_name, experiment_name + ".json"),
                                               os.path.join(experiment_name, "epoch_15_testacc_0.4935.h5"))
     print(network)
+    if use_GPU:
+        network.to_gpu()
     sgd = SGDMomentum(network, 0.05*(BATCH_SIZE/200.0), 0.9)
     logging.info(network)
 
@@ -209,15 +214,20 @@ if __name__ == "__main__":
                 sgd.multiply_learning_rate(0.5)
             for i, (X_batch, y_batch, y_one_hot) in enumerate(tqdm(train_data_loader.pull_batch(int(150473/BATCH_SIZE)), 
                                                         total=int(150473/BATCH_SIZE))):
+                if use_GPU:
+                    X_batch = cp.asarray(X_batch)
+                    y_batch = cp.asarray(y_batch)
+                    y_one_hot = cp.asarray(y_one_hot)
                 loss, batch_scores = network.forward(X_batch, y_one_hot)
                 if running_loss_average is None:
                     running_loss_average = loss
                 else:
                     running_loss_average = 0.9*running_loss_average + 0.1*loss
-                correct_total += np.sum(y_batch == np.argmax(cp.asnumpy(batch_scores), axis=1))
+                correct_total += xp.sum(y_batch == xp.argmax(batch_scores, axis=1))
                 network.backward()
                 sgd.update_weights()
-                if (i%10 == 0): logging.info("Running loss average: {}".format(running_loss_average))
+                if (i%10 == 0): 
+                    logging.info("Running loss average: {}".format(running_loss_average))
                 if (i%100 == 0) and (i > 0):
                     logging.info("Running Ave Loss: {}, Loss: {}, Accuracy over current epoch so far: {} ".format(
                                                                 running_loss_average,

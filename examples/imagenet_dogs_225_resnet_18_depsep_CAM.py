@@ -68,6 +68,7 @@ with open(num_to_dog_name_map_fname, "r") as f:
 network = ResNet18("", load_layers=False)
 network.load_network_from_json_and_h5(os.path.join(experiment_name, experiment_name + ".json"),
                                       os.path.join(experiment_name, "epoch_26_testacc_0.686.h5"))
+network.to_gpu()
 
 for l in network.layers:
     if l.layer_name == "dense1":
@@ -77,6 +78,7 @@ for im_path in os.listdir(im_dir):
     if not(os.path.isdir(os.path.join(im_dir, im_path))):
         im = preprocessor.load_image(os.path.join(im_dir, im_path))
         X = im.reshape((1,) + im.shape)
+        X = cp.asarray(X)
         loss, batch_scores = network.forward(X,
                                             y_one_hot=None,
                                             test_mode=True)
@@ -84,7 +86,7 @@ for im_path in os.listdir(im_dir):
         best = np.argsort(cp.asnumpy(scores))[::-1]
 
         pre_pooled_data = forward_to_named_layer(network, X, "res8")
-        output_cam = returnCAM(cp.asnumpy(pre_pooled_data), dense_weights, best[:3])
+        output_cam = returnCAM(cp.asnumpy(pre_pooled_data), cp.asnumpy(dense_weights), best[:3])
         save_outputs(
                 "CAM_outputs/" + os.path.splitext(im_path)[0],
                 im.transpose([1, 2, 0]) + 128.0,

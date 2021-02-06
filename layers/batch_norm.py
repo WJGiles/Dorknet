@@ -75,10 +75,6 @@ class BatchNormLayer():
         self.input_shape = X.shape
         xp = cp.get_array_module(X)
 
-        # if xp == np:
-        #     X = cp.asarray(X)
-        #     xp = cp.get_array_module(X)
-
         if not test_mode:
             if len(X.shape) == 4 and not self.is_on_gpu:
                 mean, var = batch_norm_stats_cy.channelwise_mean_and_var_4d(X)
@@ -202,12 +198,12 @@ class BatchNormLayer():
         dset = open_f.create_dataset(self.layer_name + "/gamma", 
                                      self.learned_params['gamma'].shape,
                                      dtype=self.learned_params['gamma'].dtype)
-        dset[:] = self.learned_params['gamma']
+        dset[:] = cp.asnumpy(self.learned_params['gamma'])
 
         dset_beta = open_f.create_dataset(self.layer_name + "/beta",
                                             self.learned_params['beta'].shape,
                                             dtype=self.learned_params['beta'].dtype)
-        dset_beta[:] = self.learned_params['beta']
+        dset_beta[:] = cp.asnumpy(self.learned_params['beta'])
 
         dset_running_mean = open_f.create_dataset(self.layer_name + "/running_mean",
                                             self.non_learned_params["running_mean"].shape,
@@ -223,11 +219,11 @@ class BatchNormLayer():
             dset_grads = open_f.create_dataset(self.layer_name + "/grads/gamma",
                                                self.grads['gamma'].shape,
                                                dtype=self.learned_params['gamma'].dtype)
-            dset_grads[:] = self.grads["gamma"]
+            dset_grads[:] = cp.asnumpy(self.grads["gamma"])
             dset_grads_beta = open_f.create_dataset(self.layer_name + "/grads/beta",
                                                     self.grads['beta'].shape,
                                                     dtype=self.learned_params['beta'].dtype)
-            dset_grads_beta[:] = self.grads["beta"]
+            dset_grads_beta[:] = cp.asnumpy(self.grads["beta"])
 
     def load_from_h5(self, open_f, load_grads=True):
         self.eps = open_f[self.layer_name + '/layer_info'].attrs['eps']
