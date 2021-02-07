@@ -33,7 +33,7 @@ There is a release with a zip file containing a trained model - the one used in 
 
 If you've got the model mentioned above and unzipped it in your Dorknet directory, you can have a go with;
 
-   `python -m examples.imagenet_dogs_resnet_18_depsep_CAM`
+   `python -m examples.imagenet_dogs_225_resnet_18_depsep_CAM`
 
 ## Use
 
