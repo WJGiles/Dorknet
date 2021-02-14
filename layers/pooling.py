@@ -3,25 +3,22 @@ import cupy as cp
 from .convolution import ConvLayer
 import im2col
 import pooling_cy
+from .layer import Layer
 
 profile = lambda x : x
 
-class GlobalAveragePoolingLayer:
+class GlobalAveragePoolingLayer(Layer):
     """
     Takes the mean over spatial dimensions, reducing to one feature per channel per image
     """
 
     def __init__(self, layer_name):
-        self.use_cp = True
-        self.layer_name = layer_name
+        super().__init__(layer_name)
 
     def __repr__(self):
         return "GlobalAveragePoolingLayer({})".format(
             self.layer_name
         )
-
-    def to_gpu(self):
-        pass
 
     def forward(self, X, test_mode=False):
         self.spatial_shape = (X.shape[-2], X.shape[-1])
@@ -45,9 +42,9 @@ class GlobalAveragePoolingLayer:
     def load_from_h5(self, open_f, load_grads=True):
         pass
 
-class MaxPoolLayer:
+class MaxPoolLayer(Layer):
 
-    def __init__(self, input_shape, stride=2):
+    def __init__(self, layer_name, input_shape, stride=2):
         """
         Only does square pooling regions.
         """

@@ -1,14 +1,13 @@
 import numpy as np
 import cupy as cp
+from .layer import Layer
 from regularisers import l2
 
-class DenseLayer:
+class DenseLayer(Layer):
 
     def __init__(self, layer_name, incoming_chans=None, output_dim=None, with_bias=True,
                  weight_regulariser=None, weight_initialiser="normal"):
-
-        self.is_on_gpu = False
-        self.layer_name = layer_name
+        super().__init__(layer_name)
         self.incoming_chans = incoming_chans
         self.output_dim = output_dim
         self.with_bias = with_bias
@@ -44,17 +43,6 @@ class DenseLayer:
                                        repr(self.weight_regulariser)
                                        )
 
-    def to_gpu(self):
-        if self.is_on_gpu:
-            print("Layer {} is already on GPU, ignoring request".format(self.layer_name))
-        else:
-            # move learned_params and grads to gpu
-            for k, v in self.learned_params.items():
-                self.learned_params[k] = cp.asarray(self.learned_params[k])
-            for k, v  in self.grads.items():
-                self.grads[k] = cp.asarray(self.learned_params[k])
-            self.is_on_gpu = True
-
     def forward(self, X, test_mode=False):
         xp = cp.get_array_module(X)
         if not test_mode:
@@ -77,12 +65,6 @@ class DenseLayer:
             )
 
         return xp.dot(upstream_dx, self.learned_params["weights"].T)
-
-    def regulariser_forward(self):
-        out = 0
-        if self.weight_regulariser:
-            out += self.weight_regulariser.forward(self.learned_params["weights"])
-        return out
         
     def save_to_h5(self, open_f, save_grads=True):
         base_dset = open_f.create_dataset(self.layer_name + "/layer_info", dtype=np.float32)

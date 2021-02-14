@@ -7,12 +7,12 @@ class RMSProp:
         self.network = network
         self.learnable_layers = []
         for layer in network.layers:
-            if hasattr(layer, "learned_params"):
+            if layer.learned_params is not None:
                 self.learnable_layers.append(layer)
             if hasattr(layer, "layer_list"): # For composite layers like ResidualBlock
                 for l in layer.layer_list:
-                    if hasattr(l, "learned_params"):
-                        self.learnable_layers.append(l)
+                    if layer.learned_params is not None:
+                        self.learnable_layers.append(layer)
         self.learning_rate = learning_rate
         self.decay_rate = decay_rate
         self.grad_cache = {layer: {k: np.zeros_like(v) for k, v in layer.grads.items()}

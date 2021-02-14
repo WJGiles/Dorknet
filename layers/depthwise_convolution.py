@@ -2,17 +2,19 @@ import im2col
 import numpy as np
 import cupy as cp
 import itertools
+
+from numpy.lib.function_base import select
+from .layer import Layer
 from regularisers import l2
 
-class DepthwiseConvLayer:
+class DepthwiseConvLayer(Layer):
     def __init__(self, layer_name, filter_block_shape=None,
                  stride=1, padding=1, with_bias=True,
                  weight_regulariser=None, weight_initialiser="normal"):
         """
         filter_block_shape = (num_incoming_channels, num_filter_rows, num_filter_cols)
         """
-        self.is_on_gpu = False
-        self.layer_name = layer_name
+        super().__init__(layer_name)
         self.stride = stride
         self.padding = padding
         self.with_bias = with_bias
@@ -35,9 +37,6 @@ class DepthwiseConvLayer:
             self.num_filters = None
             self.learned_params = {}
             self.grads = {}
-            
-        if self.is_on_gpu:
-            self.forward_kernel, self.backward_kernel = self.get_kernels() 
 
     def __repr__(self):
         out = "DepthwiseConvLayer({}, ".format(self.layer_name)
@@ -52,16 +51,8 @@ class DepthwiseConvLayer:
         return out
 
     def to_gpu(self):
-        if self.is_on_gpu:
-            print("Layer already on GPU, ignoring request")
-        else:
-            self.forward_kernel, self.backward_kernel = self.get_kernels()
-            # move learned_params and grads to gpu
-            for k, v in self.learned_params.items():
-                self.learned_params[k] = cp.asarray(self.learned_params[k])
-            for k, v  in self.grads.items():
-                self.grads[k] = cp.asarray(self.learned_params[k])
-            self.is_on_gpu = True
+        super().to_gpu()
+        self.forward_kernel, self.backward_kernel = self.get_kernels()
 
     def pad_input(self, X):
         xp = cp.get_array_module(X)
@@ -229,7 +220,6 @@ class DepthwiseConvLayer:
         else:
             return padded_dx
 
-
     def backward_old(self, upstream_dx):
         if self.with_bias:
             self.grads["bias"] = np.sum(upstream_dx, axis=(0,2,3))
@@ -306,12 +296,6 @@ class DepthwiseConvLayer:
         else:
             unpadded_out = padded_out
         return unpadded_out
-
-    def regulariser_forward(self):
-        out = 0
-        if self.weight_regulariser:
-            out += self.weight_regulariser.forward(self.learned_params["weights"])
-        return out
 
     def save_to_h5(self, open_f, save_grads=True):
         base_dset = open_f.create_dataset(self.layer_name + "/layer_info", dtype=np.float32)

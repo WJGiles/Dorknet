@@ -3,16 +3,14 @@ import cupy as cp
 
 class SGDMomentum:
     def __init__(self, network, learning_rate, momentum):
-        # self.use_cp = True
-        # self.numpy_or_cupy = cp if self.use_cp else np
         self.network = network
         self.learnable_layers = []
         for layer in network.layers:
-            if hasattr(layer, "learned_params"):
+            if layer.learned_params is not None:
                 self.learnable_layers.append(layer)
             if hasattr(layer, "layer_list"): # For composite layers like ResidualBlock
                 for l in layer.layer_list:
-                    if hasattr(l, "learned_params"):
+                    if l.learned_params is not None:
                         self.learnable_layers.append(l)
         self.learning_rate = learning_rate
         self.momentum = momentum

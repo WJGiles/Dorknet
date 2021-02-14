@@ -1,8 +1,8 @@
 import numpy as np
 import cupy as cp
 from tqdm import tqdm
-import os, json, logging, h5py
-from network.network import Network
+import os, logging
+from network.feed_forward_network import FeedForwardNetwork
 from layers.dense_layer import DenseLayer
 from layers.convolution import ConvLayer
 from layers.depthwise_convolution import DepthwiseConvLayer
@@ -29,7 +29,7 @@ if DOCKER:
 else:
     data_folder = "/home/will/Datasets"
 
-class ResNet18(Network):
+class ResNet18(FeedForwardNetwork):
 
     def depthwise_sep_layer(self, layer_name, incoming_chans, filter_block_shape,
                             stride=1, padding=1,
@@ -157,9 +157,10 @@ class ResNet18(Network):
                                     incoming_chans=512,
                                     output_dim=120,
                                     weight_regulariser=l2(0.0001)))
-            self.add_layer(SoftmaxWithCrossEntropy("softmax1"))
+            self.set_loss_layer(SoftmaxWithCrossEntropy("softmax1"))
 
 if __name__ == "__main__":
+    
     use_GPU = True
     xp = cp if use_GPU else np
 

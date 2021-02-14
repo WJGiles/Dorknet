@@ -1,5 +1,6 @@
 import numpy as np
 import cupy as cp
+from .layer import Layer
 from layers.convolution import ConvLayer
 from layers.depthwise_convolution import DepthwiseConvLayer
 from layers.pointwise_convolution import PointwiseConvLayer
@@ -8,7 +9,7 @@ from layers.batch_norm import BatchNormLayer
 
 from pprint import pprint
 
-class ResidualBlock:
+class ResidualBlock(Layer):
     """
     A block with a skip connection around the provided layer_list. The output of layer_list[-1] must have the same 
     shape as skip_projection(X) because they are joined by addition - skip_projection=None means an identity projection.
@@ -35,8 +36,7 @@ class ResidualBlock:
                                Out
     """
     def __init__(self, layer_name, layer_list=None, skip_projection=None, post_skip_activation=None):
-        self.is_on_gpu = False
-        self.layer_name = layer_name
+        super().__init__(layer_name)
         self.layer_list = layer_list
         self.skip_projection = skip_projection
         self.post_skip_activation = post_skip_activation

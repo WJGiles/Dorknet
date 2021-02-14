@@ -4,15 +4,15 @@ import im2col
 import sys
 import itertools, time
 #import line_profiler
+from .layer import Layer
 from regularisers import l2
 
 profile = lambda x: x
 
-class ConvLayer:
+class ConvLayer(Layer):
     def __init__(self, layer_name, filter_block_shape=None, stride=1, padding=1,
                  with_bias=True, weight_regulariser=None, weight_initialiser="normal"):
-        self.is_on_gpu = False
-        self.layer_name = layer_name
+        super().__init__(layer_name)
         self.stride = stride
         self.padding = padding
         self.patches = None
@@ -51,16 +51,8 @@ class ConvLayer:
         return out
 
     def to_gpu(self):
-        if self.is_on_gpu:
-            print("Layer already on GPU, ignoring request")
-        else:
-            self.im2col_kernel, self.row2im_kernel = self.get_kernels()
-            # move learned_params and grads to gpu
-            for k, v in self.learned_params.items():
-                self.learned_params[k] = cp.asarray(self.learned_params[k])
-            for k, v  in self.grads.items():
-                self.grads[k] = cp.asarray(self.learned_params[k])
-            self.is_on_gpu = True
+        super().to_gpu()
+        self.im2col_kernel, self.row2im_kernel = self.get_kernels()
 
     @profile
     def forward(self, X, test_mode=False):
@@ -230,12 +222,6 @@ class ConvLayer:
         } """, "row2im")
 
         return im2col_kernel, row2im_kernel
-
-    def regulariser_forward(self):
-        out = 0
-        if self.weight_regulariser:
-            out += self.weight_regulariser.forward(self.learned_params["weights"])
-        return out
 
     def save_to_h5(self, open_f, save_grads=True):
         base_dset = open_f.create_dataset(self.layer_name + "/layer_info", dtype=np.float32)

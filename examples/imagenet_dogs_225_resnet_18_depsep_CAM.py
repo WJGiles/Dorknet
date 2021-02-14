@@ -10,17 +10,6 @@ BATCH_SIZE = 60
 im_dir = "./dog_images"
 number_of_classes = 120
 
-def forward_to_named_layer(network, X, layer_name):
-    for layer in network.layers:
-        try:
-            X = layer.forward(X, test_mode=True)
-            if layer.layer_name == layer_name:
-                return X
-        except Exception as e:
-            print("Error in forward_to_named_layer: {}".format(repr(e)))
-    print("Didn't find layer called {}".format(layer_name))
-    return None
-
 def returnCAM(feature_conv, weight_softmax, class_idx):
     # generate the class activation maps upsample to 225x225
     size_upsample = (225, 225)
@@ -85,7 +74,10 @@ for im_path in os.listdir(im_dir):
         scores = batch_scores[0,:]
         best = np.argsort(cp.asnumpy(scores))[::-1]
 
-        pre_pooled_data = forward_to_named_layer(network, X, "res8")
+        loss, pre_pooled_data = network.forward(X,
+                                          y_one_hot=None,
+                                          test_mode=False,
+                                          terminal_layer_name="res8")
         output_cam = returnCAM(cp.asnumpy(pre_pooled_data), cp.asnumpy(dense_weights), best[:3])
         save_outputs(
                 "CAM_outputs/" + os.path.splitext(im_path)[0],

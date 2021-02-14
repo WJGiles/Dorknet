@@ -1,17 +1,14 @@
 import numpy as np
 import cupy as cp
+from .layer import Layer
 
-class SoftmaxWithCrossEntropy:
+class SoftmaxWithCrossEntropy(Layer):
 
     def __init__(self, layer_name):
-        self.layer_name = layer_name
-        self.is_loss = True
+        super().__init__(layer_name)
 
     def __repr__(self):
         return "SoftmaxWithCrossEntropy({})".format(self.layer_name)
-
-    def to_gpu(self):
-        pass
 
     def forward(self, X, y_one_hot=None, test_mode=False):
         xp = cp.get_array_module(X, y_one_hot)
@@ -29,7 +26,11 @@ class SoftmaxWithCrossEntropy:
                                                               self.y_one_hot.shape[1], 1))))
         return loss, X
 
-    def backward(self):
+    def backward(self, upstream_dx=None):
+        """
+        upstream_dx is not used
+        """
+
         return (1/float(self.downstream_x.shape[0]))*(self.downstream_x - self.y_one_hot)
 
     def save_to_h5(self, open_f, save_grads=True):

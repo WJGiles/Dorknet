@@ -1,11 +1,12 @@
 import numpy as np
 import numexpr as ne
 import cupy as cp
+from .layer import Layer
 import batch_norm_stats_cy
 ne.set_vml_accuracy_mode('low')
 profile = lambda x: x
 
-class BatchNormLayer():
+class BatchNormLayer(Layer):
     """
     https://arxiv.org/pdf/1502.03167.pdf
     """
@@ -16,8 +17,7 @@ class BatchNormLayer():
         : incoming_chans: is number of feature maps (channels) for conv layer, 
         or features (cols) for dense layer 
         """
-        self.is_on_gpu = False
-        self.layer_name = layer_name
+        super().__init__(layer_name)
         self.eps = 1e-5 # Fuzz factor for numerical stability
         self.input_dimension = input_dimension
         self.non_learned_params = {"running_mean": None,
@@ -49,21 +49,6 @@ class BatchNormLayer():
         return "BatchNormLayer({}, input_dimension={}, incoming_chans={}, run_momentum={})".format(
             self.layer_name, self.input_dimension, self.incoming_chans, self.run_momentum
         )
-
-    def to_gpu(self):
-        if self.is_on_gpu:
-            print("Layer {} is already on GPU, ignoring request".format(self.layer_name))
-        else:
-            # move learned_params and grads to gpu
-            for k, v in self.learned_params.items():
-                self.learned_params[k] = cp.asarray(v)
-            for k, v in self.non_learned_params.items():
-                if v is not None:
-                    self.non_learned_params[k] = cp.asarray(v)
-            for k, v  in self.grads.items():
-                self.grads[k] = cp.asarray(v)
-            
-            self.is_on_gpu = True
 
     @profile
     def forward(self, X, test_mode=False, use_express=False):

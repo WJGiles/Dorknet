@@ -1,18 +1,15 @@
 import numpy as np
 import cupy as cp
+from .layer import Layer
 import relu_cy
 
-class ReLu:
+class ReLu(Layer):
 
     def __init__(self, layer_name):
-        self.is_on_gpu = False
-        self.layer_name = layer_name
+        super().__init__(layer_name)
 
     def __repr__(self):
         return "ReLu({})".format(self.layer_name)
-
-    def to_gpu(self):
-        self.is_on_gpu = True
 
     def forward(self, X, test_mode=False):
         if self.is_on_gpu:
@@ -44,13 +41,10 @@ class ReLu:
             self.positive_locs = (out > 0).astype(cp.float32)
         return out
 
-    def backward(self, upstream_dx): 
-        if self.is_on_gpu:
-            return cp.multiply(cp.asarray(upstream_dx), cp.asarray(self.positive_locs))
-        #else:
-        #xp = cp.get_array_module(upstream_dx, self.positive_locs)
-
-        return np.multiply(upstream_dx, self.positive_locs)
+    def backward(self, upstream_dx):
+        xp = cp.get_array_module(upstream_dx, self.positive_locs)
+        
+        return xp.multiply(upstream_dx, self.positive_locs)
 
     def save_to_h5(self, open_f, save_grads=True):
         base_dset = open_f.create_dataset(self.layer_name + "/layer_info", dtype=np.float32)

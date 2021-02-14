@@ -3,12 +3,12 @@ class SGD:
         self.network = network
         self.learnable_layers = []
         for layer in network.layers:
-            if hasattr(layer, "learned_params"):
+            if layer.learned_params is not None:
                 self.learnable_layers.append(layer)
             if hasattr(layer, "layer_list"): # For composite layers like ResidualBlock
                 for l in layer.layer_list:
-                    if hasattr(l, "learned_params"):
-                        self.learnable_layers.append(l)
+                    if layer.learned_params is not None:
+                        self.learnable_layers.append(layer)
         self.learning_rate = learning_rate
 
     def set_learning_rate(self, new_lr):

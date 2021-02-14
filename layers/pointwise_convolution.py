@@ -1,15 +1,15 @@
 import numpy as np
 import cupy as cp
+from .layer import Layer
 from regularisers import l2
 
-class PointwiseConvLayer:
+class PointwiseConvLayer(Layer):
     def __init__(self, layer_name, stride=1, filter_block_shape=None, with_bias=True,
                  weight_regulariser=None, weight_initialiser="normal"):
         """
         filter_block_shape = (num_filters, num_incoming_channels)
         """
-        self.is_on_gpu = False
-        self.layer_name = layer_name
+        super().__init__(layer_name)
         self.stride = stride
         self.with_bias = with_bias
         self.weight_regulariser = weight_regulariser
@@ -43,17 +43,6 @@ class PointwiseConvLayer:
                                                                         self.is_on_gpu)
         return out
 
-    def to_gpu(self):
-        if self.is_on_gpu:
-            print("Layer already on GPU, ignoring request")
-        else:
-            # move learned_params and grads to gpu
-            for k, v in self.learned_params.items():
-                self.learned_params[k] = cp.asarray(self.learned_params[k])
-            for k, v  in self.grads.items():
-                self.grads[k] = cp.asarray(self.learned_params[k])
-            self.is_on_gpu = True
-
     def forward(self, X, test_mode=False):
         xp = cp.get_array_module(X)
         if self.stride > 1:
@@ -84,12 +73,6 @@ class PointwiseConvLayer:
         else:
 
             return dx
-
-    def regulariser_forward(self):
-        out = 0
-        if self.weight_regulariser:
-            out += self.weight_regulariser.forward(self.learned_params["weights"])
-        return out
 
     def save_to_h5(self, open_f, save_grads=True):
         base_dset = open_f.create_dataset(self.layer_name + "/layer_info", dtype=np.float32)

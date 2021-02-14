@@ -1,8 +1,9 @@
 import numpy as np
+from .layer import Layer
 
 class ReshapeLayer:
-    def __init__(self, input_shape, output_shape):
-        self.type = "reshape"
+    def __init__(self, layer_name, input_shape, output_shape):
+        super.__init__(layer_name)
         self.input_shape = input_shape
         self.output_shape = output_shape
 

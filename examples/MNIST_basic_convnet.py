@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from network.network import Network
+from network.feed_forward_network import FeedForwardNetwork
 from layers.convolution import ConvLayer
 from layers.batch_norm import BatchNormLayer
 from layers.activations import ReLu
@@ -12,7 +12,7 @@ from data_loading.MNIST_data_loading import get_MNIST_data, epoch_image_generato
 
 BATCH_SIZE = 200
 
-class MNISTNet(Network):
+class MNISTNet(FeedForwardNetwork):
 
     def __init__(self, name, load_layers=True):
         super().__init__(name)
@@ -66,7 +66,7 @@ class MNISTNet(Network):
                                       incoming_chans=128,
                                       output_dim=10,
                                       weight_regulariser=l2(0.0005)))
-            self.add_layer(SoftmaxWithCrossEntropy("softmax"))
+            self.set_loss_layer(SoftmaxWithCrossEntropy("softmax"))
 
 X_train, y_train, X_val, y_val, X_test, y_test = get_MNIST_data(num_training=50000, 
                                                                 num_validation=10000, 
@@ -87,7 +87,6 @@ for e in range(1, 15, 1):
                                                             ), 
                                                             total=50000/BATCH_SIZE)):
         loss, batch_scores = network.forward(X_batch, y_one_hot)
-        #print(loss)
         network.backward()
         sgd.update_weights()
     print("Testing...")
